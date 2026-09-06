@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchMate — Advanced RAG Document Search</title>
+  <meta name="description" content="Production-ready RAG search engine with ChromaDB, OpenAI embeddings, and Anthropic Claude.">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <span class="brand-title">ResearchMate</span>
+          <span class="badge-pill" id="model-badge">AI RAG</span>
+        </div>
+      </div>
+
+      <!-- Format Compatibility Indicators -->
+      <div class="format-bar">
+        <span class="format-label">Supported:</span>
+        <span class="format-tag pdf">PDF</span>
+        <span class="format-tag docx">DOCX</span>
+        <span class="format-tag txt">TXT</span>
+        <span class="format-tag md">MD</span>
+      </div>
+
+      <!-- Vector Store Status -->
+      <div class="nav-actions">
+        <div class="status-badge" title="ChromaDB Persistent Store">
+          <span class="status-indicator"></span>
+          <span>ChromaDB:</span>
+          <span id="total-chunks" style="color: var(--accent-emerald);">Ready</span>
+        </div>
+        <button class="icon-btn" onclick="window.location.reload()" title="Reset Session">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Chat Content -->
+    <main class="chat-container" id="chat-container">
+      <div class="chat-viewport" id="chat-viewport">
+        
+        <!-- Welcome Screen / Empty State -->
+        <div class="welcome-hero">
+          <div class="hero-icon-ring">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h1 class="welcome-title">ResearchMate RAG Engine</h1>
+          <p class="welcome-subtitle">
+            Upload your technical documentation, deployment guides, or whitepapers to query grounded answers with direct citations.
+          </p>
+
+          <!-- Starter Suggestion Cards -->
+          <div class="starters-grid">
+            <div class="starter-card" data-query="What is the overall architecture and primary deployment pipeline described in the notes?">
+              <span class="starter-icon">🚀</span>
+              <span class="starter-text">Explain the primary CI/CD deployment pipeline stages</span>
+            </div>
+            <div class="starter-card" data-query="What rollback strategies and canary verification steps are outlined?">
+              <span class="starter-icon">🛡️</span>
+              <span class="starter-text">Review rollback workflows and safety checks</span>
+            </div>
+            <div class="starter-card" data-query="Summarize all environment prerequisites and dependencies mentioned.">
+              <span class="starter-icon">📋</span>
+              <span class="starter-text">Summarize deployment prerequisites & environments</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Floating Bottom Dock -->
+    <div class="dock-container">
+      <!-- Active Documents Ingested Chips -->
+      <div class="active-docs-tray" id="active-docs-tray"></div>
+
+      <!-- Drag & Drop Upload Bar -->
+      <div class="dropzone-bar" id="dropzone-bar" title="Drag & drop or click to upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Drop files here or click to index (.pdf, .docx, .txt, .md)</span>
+      </div>
+
+      <!-- Text Query Bar -->
+      <div class="input-dock">
+        <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.md">
+        <button class="dock-btn" onclick="document.getElementById('file-input').click()" title="Attach Document">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+          </svg>
+        </button>
+
+        <textarea 
+          id="prompt-input" 
+          class="prompt-textarea" 
+          rows="1" 
+          placeholder="Ask a question about your documents... (Enter to send)"
+        ></textarea>
+
+        <button id="submit-btn" class="dock-btn submit-btn" disabled title="Send Query">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast-notice" class="toast-notice">
+      <span id="toast-message">Ready</span>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

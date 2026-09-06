@@ -1,6 +1,7 @@
 """
 FastAPI application module.
-Exposes RESTful endpoints for document ingestion (/index) and RAG querying (/query).
+Exposes RESTful endpoints for document ingestion (/index), RAG querying (/query),
+and serves the modern ResearchMate web user interface.
 """
 
 import os
@@ -8,9 +9,18 @@ import tempfile
 from typing import List
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from config import TOP_K
+from config import (
+    TOP_K,
+    collection,
+    LLM_PROVIDER,
+    ANTHROPIC_MODEL,
+    OPENAI_CHAT_MODEL,
+    EMBED_MODEL
+)
 from vector_store import index_file
 from rag_pipeline import answer
 
@@ -29,6 +39,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static files directory
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # ===========================================================================
@@ -51,17 +66,48 @@ class IndexResponse(BaseModel):
     chunks_indexed: int
 
 
+class StatsResponse(BaseModel):
+    collection_name: str
+    total_chunks: int
+    model: str
+    llm_provider: str
+    embed_model: str
+
+
 # ===========================================================================
-# Endpoints
+# Web UI & Endpoints
 # ===========================================================================
 
 @app.get("/")
-def root():
+def serve_ui():
+    """Serve the modern dark minimalist web UI."""
+    index_file_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_file_path):
+        return FileResponse(index_file_path)
     return {
         "service": "Smart Document Search API",
         "status": "online",
         "docs_url": "/docs"
     }
+
+
+@app.get("/stats", response_model=StatsResponse)
+def get_stats():
+    """Return live ChromaDB and LLM pipeline statistics."""
+    try:
+        count = collection.count()
+    except Exception:
+        count = 0
+
+    active_model = ANTHROPIC_MODEL if LLM_PROVIDER == "anthropic" else OPENAI_CHAT_MODEL
+
+    return StatsResponse(
+        collection_name=collection.name,
+        total_chunks=count,
+        model=active_model,
+        llm_provider=LLM_PROVIDER,
+        embed_model=EMBED_MODEL
+    )
 
 
 @app.post("/index", response_model=IndexResponse)
